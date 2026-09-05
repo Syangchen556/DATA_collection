@@ -15,6 +15,9 @@ UPSTASH_REDIS_REST_URL
 UPSTASH_REDIS_REST_TOKEN
 ```
 
+The Vercel Upstash integration may instead inject `KV_REST_API_URL` and
+`KV_REST_API_TOKEN`; the application supports both naming schemes.
+
 5. Deploy. Vercel supplies HTTPS, so phone browsers can request camera permission.
 
 For local development, copy `.env.example` to `.env.local`, supply development credentials, run `npm install`, then `npm run dev`.

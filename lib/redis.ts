@@ -1,8 +1,10 @@
 import { Redis } from '@upstash/redis';
 
 export const getRedis = () => {
-  if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) throw new Error('Session storage is not configured. Connect an Upstash Redis database to this Vercel project and redeploy.');
-  return Redis.fromEnv();
+  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+  if (!url || !token) throw new Error('Session storage is not configured. Connect Upstash Redis to this Vercel project, enable its environment variables, and redeploy.');
+  return new Redis({ url, token });
 };
 export const SESSION_TTL_SECONDS = 60 * 60 * 24;
 export const sessionKey = (id: string) => `bsl:session:${id}`;
