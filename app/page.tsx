@@ -3,6 +3,7 @@
 import { ArrowRight, Camera, Radio, Smartphone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { SyntheticEvent, useState } from 'react';
+import { errorMessage, readJsonSafely } from '@/lib/http';
 
 export default function Home() {
   const router = useRouter();
@@ -14,8 +15,9 @@ export default function Home() {
     event.preventDefault(); setBusy(true); setError('');
     try {
       const response = await fetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
-      const value: unknown = await response.json();
-      if (!response.ok || !value || typeof value !== 'object') throw new Error('Could not create the collection session.');
+      const value = await readJsonSafely(response);
+      if (!response.ok) throw new Error(errorMessage(value, `Could not create the collection session (HTTP ${response.status}).`));
+      if (!value || typeof value !== 'object') throw new Error('The server returned an invalid session response.');
       const data = value as { sessionId?: string; controllerToken?: string; phoneToken?: string };
       if (!data.sessionId || !data.controllerToken || !data.phoneToken) throw new Error('The server returned an invalid session.');
       router.push(`/controller?session=${encodeURIComponent(data.sessionId)}&controllerToken=${encodeURIComponent(data.controllerToken)}&phoneToken=${encodeURIComponent(data.phoneToken)}`);

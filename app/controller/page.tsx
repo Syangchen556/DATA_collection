@@ -6,15 +6,16 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { CameraView, isSessionSnapshot, SessionSnapshot, VIEWS } from '@/lib/session';
+import { errorMessage, readJsonSafely } from '@/lib/http';
 
 const labels: Record<CameraView,string>={front:'Front view',left:'Left view',right:'Right view'};
 function ControllerContent(){
   const params=useSearchParams(); const sessionId=params.get('session')||''; const controllerToken=params.get('controllerToken')||''; const phoneToken=params.get('phoneToken')||'';
   const [snapshot,setSnapshot]=useState<SessionSnapshot|null>(null); const [origin,setOrigin]=useState(''); const [notice,setNotice]=useState('Waiting for three phones…'); const [now,setNow]=useState(0);
   const authUrl=useMemo(()=>`/api/session/${encodeURIComponent(sessionId)}?role=controller&token=${encodeURIComponent(controllerToken)}`,[controllerToken,sessionId]);
-  const fetchSnapshot=useCallback(async()=>{if(!sessionId||!controllerToken)return; const response=await fetch(authUrl,{cache:'no-store'}); const value:unknown=await response.json(); if(response.ok&&isSessionSnapshot(value)){setSnapshot(value);setNow(Date.now());}else if(!response.ok)setNotice('This session is invalid or expired.');},[authUrl,controllerToken,sessionId]);
+  const fetchSnapshot=useCallback(async()=>{if(!sessionId||!controllerToken)return; const response=await fetch(authUrl,{cache:'no-store'}); const value=await readJsonSafely(response); if(response.ok&&isSessionSnapshot(value)){setSnapshot(value);setNow(Date.now());}else if(!response.ok)setNotice(errorMessage(value,`Session request failed (HTTP ${response.status}).`));},[authUrl,controllerToken,sessionId]);
   useEffect(()=>{const start=window.setTimeout(()=>{setOrigin(window.location.origin);void fetchSnapshot();},0);const timer=window.setInterval(()=>void fetchSnapshot(),1000);return()=>{clearTimeout(start);clearInterval(timer);};},[fetchSnapshot]);
-  const issue=useCallback(async(action:'start'|'stop')=>{setNotice(action==='start'?'Starting all cameras in five seconds…':'Stopping and uploading…');const response=await fetch(authUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action})});const value:unknown=await response.json();if(!response.ok){const problem=value as{error?:string};setNotice(problem.error||'The command failed.');}await fetchSnapshot();},[authUrl,fetchSnapshot]);
+  const issue=useCallback(async(action:'start'|'stop')=>{setNotice(action==='start'?'Starting all cameras in five seconds…':'Stopping and uploading…');const response=await fetch(authUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action})});const value=await readJsonSafely(response);if(!response.ok)setNotice(errorMessage(value,`Command failed (HTTP ${response.status}).`));await fetchSnapshot();},[authUrl,fetchSnapshot]);
   const rawCameras=snapshot?.cameras??{};
   const secureDownload=(url:string)=>`/api/file?session=${encodeURIComponent(sessionId)}&token=${encodeURIComponent(controllerToken)}&url=${encodeURIComponent(url)}`;
   const cameras=Object.fromEntries(VIEWS.map((cameraView)=>{const camera=rawCameras[cameraView];return[cameraView,camera?{...camera,videoUrl:camera.videoUrl?secureDownload(camera.videoUrl):undefined,landmarksUrl:camera.landmarksUrl?secureDownload(camera.landmarksUrl):undefined}:undefined];})) as typeof rawCameras;
