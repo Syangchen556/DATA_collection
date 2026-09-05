@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRedis, commandKey, SESSION_TTL_SECONDS, sessionKey } from '@/lib/redis';
+import { saveSession } from '@/lib/local-store';
 import { createToken, hashToken, safeToken, SessionConfig, SessionRecord } from '@/lib/session';
 
 export async function POST(request: NextRequest) {
@@ -14,11 +14,7 @@ export async function POST(request: NextRequest) {
   const phoneToken = createToken();
   const config: SessionConfig = { sessionId, participant, sessionLabel, sign, take, takeId: crypto.randomUUID(), createdAt: Date.now() };
   const record: SessionRecord = { config, controllerTokenHash: await hashToken(controllerToken), phoneTokenHash: await hashToken(phoneToken) };
-  const redis = getRedis();
-  await Promise.all([
-    redis.set(sessionKey(sessionId), record, { ex: SESSION_TTL_SECONDS }),
-    redis.set(commandKey(sessionId), { id: crypto.randomUUID(), type: 'idle', issuedAt: Date.now(), takeId: config.takeId }, { ex: SESSION_TTL_SECONDS }),
-  ]);
+  await saveSession(sessionId, record, { id: crypto.randomUUID(), type: 'idle', issuedAt: Date.now(), takeId: config.takeId });
   return NextResponse.json({ sessionId, controllerToken, phoneToken, config });
  } catch (error) {
   return NextResponse.json({ error: error instanceof Error ? error.message : 'Could not create the session.' }, { status: 503 });

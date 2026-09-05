@@ -11,6 +11,7 @@
 # testing
 /coverage
 *.tsbuildinfo
+/data/
 
 # next.js
 /.next/

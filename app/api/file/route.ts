@@ -1,18 +1,13 @@
-import { get } from '@vercel/blob';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { NextRequest, NextResponse } from 'next/server';
 import { authorize } from '@/lib/api';
+import { capturePath } from '@/lib/local-store';
 
+export const runtime = 'nodejs';
 export async function GET(request: NextRequest) {
-  const sessionId = request.nextUrl.searchParams.get('session') || '';
-  const url = request.nextUrl.searchParams.get('url') || '';
-  const auth = await authorize(request, sessionId, 'controller');
-  if ('error' in auth) return auth.error;
-  if (!url.startsWith('https://') || !url.includes('.blob.vercel-storage.com/')) return NextResponse.json({ error: 'Invalid file URL.' }, { status: 400 });
-  const result = await get(url, { access: 'private' });
-  if (!result || !result.stream || result.statusCode !== 200) return NextResponse.json({ error: 'File not found.' }, { status: 404 });
-  const headers = new Headers();
-  result.headers.forEach((value, key) => headers.set(key, value));
-  const filename = result.blob.pathname.split('/').at(-1) || 'capture';
-  headers.set('Content-Disposition', `attachment; filename="${filename.replace(/"/g, '')}"`);
-  return new NextResponse(result.stream, { headers });
+  const sessionId = request.nextUrl.searchParams.get('session') || ''; const relative = request.nextUrl.searchParams.get('path') || '';
+  const auth = await authorize(request, sessionId, 'controller'); if ('error' in auth) return auth.error;
+  try { const file = capturePath(...relative.split('/')); const bytes = await readFile(file); const filename = path.basename(file); return new NextResponse(bytes, { headers: { 'Content-Type': filename.endsWith('.json') ? 'application/json' : filename.endsWith('.mp4') ? 'video/mp4' : 'video/webm', 'Content-Disposition': `attachment; filename="${filename}"` } }); }
+  catch { return NextResponse.json({ error: 'File not found.' }, { status: 404 }); }
 }

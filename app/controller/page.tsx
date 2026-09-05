@@ -17,7 +17,7 @@ function ControllerContent(){
   useEffect(()=>{const start=window.setTimeout(()=>{setOrigin(window.location.origin);void fetchSnapshot();},0);const timer=window.setInterval(()=>void fetchSnapshot(),1000);return()=>{clearTimeout(start);clearInterval(timer);};},[fetchSnapshot]);
   const issue=useCallback(async(action:'start'|'stop')=>{setNotice(action==='start'?'Starting all cameras in five seconds…':'Stopping and uploading…');const response=await fetch(authUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action})});const value=await readJsonSafely(response);if(!response.ok)setNotice(errorMessage(value,`Command failed (HTTP ${response.status}).`));await fetchSnapshot();},[authUrl,fetchSnapshot]);
   const rawCameras=snapshot?.cameras??{};
-  const secureDownload=(url:string)=>`/api/file?session=${encodeURIComponent(sessionId)}&token=${encodeURIComponent(controllerToken)}&url=${encodeURIComponent(url)}`;
+  const secureDownload=(filePath:string)=>`/api/file?session=${encodeURIComponent(sessionId)}&token=${encodeURIComponent(controllerToken)}&path=${encodeURIComponent(filePath)}`;
   const cameras=Object.fromEntries(VIEWS.map((cameraView)=>{const camera=rawCameras[cameraView];return[cameraView,camera?{...camera,videoUrl:camera.videoUrl?secureDownload(camera.videoUrl):undefined,landmarksUrl:camera.landmarksUrl?secureDownload(camera.landmarksUrl):undefined}:undefined];})) as typeof rawCameras;
   const allReady=VIEWS.every((view)=>cameras[view]?.ready&&now-(cameras[view]?.updatedAt??0)<15000);const recording=snapshot?.command.type==='start';
   const phoneUrl=origin&&`${origin}/camera?session=${encodeURIComponent(sessionId)}&token=${encodeURIComponent(phoneToken)}`;
