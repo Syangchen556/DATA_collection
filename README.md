@@ -1,40 +1,37 @@
-# Multi-View BSL Data Collector
+# Multi-View BSL Data Collector — laptop storage
 
-A Vercel-ready three-phone recorder for synchronized front, left, and right sign-language video. MediaPipe runs on each phone and extracts hand, pose, and face landmarks while the browser records the original video.
+The laptop coordinates three phones and stores every recording locally. MediaPipe runs in each phone browser and extracts hand, pose, and face landmarks while the browser records video.
 
-## Vercel setup
+No Redis, Vercel Blob, database, or cloud-storage credentials are required.
 
-1. Import this repository into Vercel.
-2. In the Vercel project, create and connect a **private Vercel Blob** store.
-3. From the Vercel Marketplace, create and connect an **Upstash Redis** database.
-4. Confirm these environment variables exist:
+## Start the collector
 
-```text
-BLOB_READ_WRITE_TOKEN
-UPSTASH_REDIS_REST_URL
-UPSTASH_REDIS_REST_TOKEN
+```powershell
+npm install
+npm run dev:network
 ```
 
-The Vercel Upstash integration may instead inject `KV_REST_API_URL` and
-`KV_REST_API_TOKEN`; the application supports both naming schemes.
+In a second terminal, expose the local server with an HTTPS tunnel:
 
-5. Deploy. Vercel supplies HTTPS, so phone browsers can request camera permission.
+```powershell
+cloudflared tunnel --protocol http2 --edge-ip-version 4 --url http://localhost:3000
+```
 
-For local development, copy `.env.example` to `.env.local`, supply development credentials, run `npm install`, then `npm run dev`.
+The explicit HTTP/2 and IPv4 options avoid QUIC/IPv6 connectivity problems on
+networks that restrict Cloudflare Tunnel traffic. A successful connection prints
+`Registered tunnel connection`.
 
-## Collection workflow
+Open the generated `https://...trycloudflare.com` address on the laptop. Create a session and scan the displayed QR code on all three phones. The tunnel supplies HTTPS for phone-camera permission; files are written by the application to the laptop.
 
-1. Enter participant ID, session ID, gloss, and take.
-2. Open the control room and scan its QR code on three phones.
-3. Assign exactly one phone to each of Front, Left, and Right.
-4. Grant camera permission and wait until all positions are ready.
-5. Start the synchronized five-second countdown, perform the sign, and stop the take.
-6. Each phone uploads directly to private Blob storage. Failed uploads remain in that phone's IndexedDB and can be retried.
+Always open the control room through the generated HTTPS tunnel address, not
+through `localhost`. This ensures that the QR code also contains the phone-accessible
+tunnel address. Quick Tunnel addresses change whenever Cloudflared is restarted,
+so create a new session and QR code after a restart.
 
-## Output structure
+## Output location
 
 ```text
-captures/P001/S001/hello/T001/
+data/captures/P001/S001/hello/T001/
   P001_S001_hello_T001_front.webm
   P001_S001_hello_T001_front_landmarks.json
   P001_S001_hello_T001_left.webm
@@ -43,9 +40,20 @@ captures/P001/S001/hello/T001/
   P001_S001_hello_T001_right_landmarks.json
 ```
 
-Session records expire after 24 hours. Each session uses separate cryptographically random controller and phone tokens. Start commands are bound to one take and phones reject signals arriving more than 1.5 seconds late.
+Session coordination files are stored under `data/sessions/`. The entire `data/` directory is excluded from Git.
 
-## Checks
+## Workflow
+
+1. Enter participant, session, sign/gloss, and take on the laptop.
+2. Scan the single QR code on three phones.
+3. Assign Front, Left, and Right to separate phones and grant camera permission.
+4. Wait until all three phones are ready.
+5. Start the shared five-second countdown and record the sign.
+6. Stop the take. Each phone uploads its video and MediaPipe JSON through the tunnel to the laptop.
+
+Failed uploads remain in that phone's IndexedDB and can be retried. Keep the laptop server running, phones awake, and browser pages visible until all views show complete.
+
+## Verify
 
 ```powershell
 npm run typecheck
@@ -53,5 +61,3 @@ npm run lint
 npm test
 npm run build
 ```
-
-Keep phone browsers visible and devices awake. For frame-level verification, clap once after recording starts. Obtain informed participant consent and establish a retention policy before collecting identifiable video.

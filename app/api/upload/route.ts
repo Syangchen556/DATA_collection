@@ -9,8 +9,9 @@ export const runtime = 'nodejs';
 export async function POST(request: NextRequest) {
   try {
     const form = await request.formData();
-    const sessionId = typeof form.get('sessionId') === 'string' ? String(form.get('sessionId')) : '';
-    const phoneToken = typeof form.get('phoneToken') === 'string' ? String(form.get('phoneToken')) : '';
+    const rawSessionId = form.get('sessionId'); const rawPhoneToken = form.get('phoneToken');
+    const sessionId = typeof rawSessionId === 'string' ? rawSessionId : '';
+    const phoneToken = typeof rawPhoneToken === 'string' ? rawPhoneToken : '';
     const view = form.get('view'); const video = form.get('video'); const landmarks = form.get('landmarks');
     const securedRequest = new NextRequest(`${request.nextUrl.origin}/api/upload?token=${encodeURIComponent(phoneToken)}`);
     const auth = await authorize(securedRequest, sessionId, 'phone');
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
     const config = auth.record.config; const stem = captureStem(config, view); const extension = video.type.includes('mp4') ? 'mp4' : 'webm';
     const directory = capturePath(config.participant, config.sessionLabel, config.sign, config.take); await mkdir(directory, { recursive: true });
     const videoName = `${stem}.${extension}`; const landmarksName = `${stem}_landmarks.json`;
-    await Promise.all([writeFile(path.join(directory, videoName), Buffer.from(await video.arrayBuffer())), writeFile(path.join(directory, landmarksName), Buffer.from(await landmarks.arrayBuffer()))]);
+    await Promise.all([writeFile(path.join(/* turbopackIgnore: true */ directory, videoName), Buffer.from(await video.arrayBuffer())), writeFile(path.join(/* turbopackIgnore: true */ directory, landmarksName), Buffer.from(await landmarks.arrayBuffer()))]);
     const relativeBase = [config.participant, config.sessionLabel, config.sign, config.take].join('/');
     return NextResponse.json({ videoPath: `${relativeBase}/${videoName}`, landmarksPath: `${relativeBase}/${landmarksName}`, filename: videoName });
   } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'Upload failed.' }, { status: 500 }); }
