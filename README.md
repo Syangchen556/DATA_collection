@@ -1,6 +1,6 @@
 # Multi-View BSL Data Collector — laptop storage
 
-The laptop coordinates three phones and stores every recording locally. MediaPipe runs in each phone browser and extracts hand, pose, and face landmarks while the browser records video.
+The laptop coordinates three phones and stores every recording locally. MediaPipe runs in each phone browser and extracts hand and pose landmarks while the browser records video. Face landmark detection is intentionally disabled to reduce loading time and phone workload.
 
 No Redis, Vercel Blob, database, or cloud-storage credentials are required.
 
