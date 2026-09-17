@@ -5,7 +5,7 @@ const config: SessionConfig = { sessionId: 'uuid', participant: 'P001', sessionL
 
 describe('dataset naming', () => {
   it('sanitizes path tokens', () => expect(safeToken('../hello world', 'sign')).toBe('_hello_world'));
-  it('creates systematic view filenames', () => expect(captureStem(config, 'front')).toBe('P001_S001_thank_you_T002_front'));
+  it('creates systematic view filenames', () => expect(captureStem(config, 'front')).toBe('thank_you_T002_front'));
   it('accepts only known camera views', () => { expect(isCameraView('left')).toBe(true); expect(isCameraView('rear')).toBe(false); });
 });
 

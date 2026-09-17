@@ -18,10 +18,11 @@ export async function POST(request: NextRequest) {
     if ('error' in auth) return auth.error;
     if (!isCameraView(view) || !(video instanceof File) || !(landmarks instanceof File)) return NextResponse.json({ error: 'Invalid upload.' }, { status: 400 });
     const config = auth.record.config; const stem = captureStem(config, view); const extension = video.type.includes('mp4') ? 'mp4' : 'webm';
-    const directory = capturePath(config.participant, config.sessionLabel, config.sign, config.take); await mkdir(directory, { recursive: true });
+    const category = config.category || 'uncategorized';
+    const directory = capturePath(category, config.sign); await mkdir(directory, { recursive: true });
     const videoName = `${stem}.${extension}`; const landmarksName = `${stem}_landmarks.json`;
     await Promise.all([writeFile(path.join(/* turbopackIgnore: true */ directory, videoName), Buffer.from(await video.arrayBuffer())), writeFile(path.join(/* turbopackIgnore: true */ directory, landmarksName), Buffer.from(await landmarks.arrayBuffer()))]);
-    const relativeBase = [config.participant, config.sessionLabel, config.sign, config.take].join('/');
+    const relativeBase = [category, config.sign].join('/');
     return NextResponse.json({ videoPath: `${relativeBase}/${videoName}`, landmarksPath: `${relativeBase}/${landmarksName}`, filename: videoName });
   } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'Upload failed.' }, { status: 500 }); }
 }

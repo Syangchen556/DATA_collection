@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   const sessionId = crypto.randomUUID();
   const controllerToken = createToken();
   const phoneToken = createToken();
-  const config: SessionConfig = { sessionId, participant, sessionLabel, sign, take, takeId: crypto.randomUUID(), createdAt: Date.now() };
+  const config: SessionConfig = { sessionId, participant, sessionLabel, category: safeToken(typeof input.category === 'string' ? input.category : '', 'uncategorized'), sign, take, takeId: crypto.randomUUID(), createdAt: Date.now() };
   const record: SessionRecord = { config, controllerTokenHash: await hashToken(controllerToken), phoneTokenHash: await hashToken(phoneToken) };
   await saveSession(sessionId, record, { id: crypto.randomUUID(), type: 'idle', issuedAt: Date.now(), takeId: config.takeId });
   return NextResponse.json({ sessionId, controllerToken, phoneToken, config });
